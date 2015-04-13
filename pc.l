@@ -1,8 +1,9 @@
 %{
 #include <stdio.h>
+#include "Tree.h"
 #include "y.tab.hpp"
 
-void echo(char *);
+void echo(string);
 
 %}
 
@@ -32,32 +33,32 @@ whitespace	[ \t]+
 ".."		{ echo("DOTDOT"); return DOTDOT; }
 ":="		{ echo("ASSIGNOP"); return ASSIGNOP; }
 
-"="			{ fprintf(stderr, "RELOP[%s]", yytext); return RELOP; }
-"<>"		{ fprintf(stderr, "RELOP[%s]", yytext); return RELOP; }
-"<"			{ fprintf(stderr, "RELOP[%s]", yytext); return RELOP; }
-"<="		{ fprintf(stderr, "RELOP[%s]", yytext); return RELOP; }
-">"			{ fprintf(stderr, "RELOP[%s]", yytext); return RELOP; }
-">="		{ fprintf(stderr, "RELOP[%s]", yytext); return RELOP; }
+"="		{ /* fprintf(stderr, "RELOP[%s]", yytext);*/ return RELOP; }
+"<>"		{ /* fprintf(stderr, "RELOP[%s]", yytext);*/ return RELOP; }
+"<"		{ /* fprintf(stderr, "RELOP[%s]", yytext);*/ return RELOP; }
+"<="		{ /* fprintf(stderr, "RELOP[%s]", yytext);*/ return RELOP; }
+">"		{ /* fprintf(stderr, "RELOP[%s]", yytext);*/ return RELOP; }
+">="		{ /* fprintf(stderr, "RELOP[%s]", yytext);*/ return RELOP; }
 
-"or"		{ fprintf(stderr, "ADDOP[%s]", yytext); yylval.opval = OR; return ADDOP; }
-"+"			{ fprintf(stderr, "ADDOP[%s]", yytext); yylval.opval = PLUS; return ADDOP; }
-"-"			{ fprintf(stderr, "ADDOP[%s]", yytext); yylval.opval = MINUS; return ADDOP; }
+"or"		{ /* fprintf(stderr, "ADDOP[%s]", yytext);*/ yylval.opval = OR; return ADDOP; }
+"+"		{ /* fprintf(stderr, "ADDOP[%s]", yytext);*/ yylval.opval = PLUS; return ADDOP; }
+"-"		{ /* fprintf(stderr, "ADDOP[%s]", yytext);*/ yylval.opval = MINUS; return ADDOP; }
 
-"and"		{ fprintf(stderr, "MULOP[%s]", yytext); yylval.opval = AND; return MULOP; }
-"*"			{ fprintf(stderr, "MULOP[%s]", yytext); yylval.opval = STAR; return MULOP; }
-"/"			{ fprintf(stderr, "MULOP[%s]", yytext); yylval.opval = SLASH; return MULOP; }
+"and"		{ /* fprintf(stderr, "MULOP[%s]", yytext);*/ yylval.opval = AND; return MULOP; }
+"*"		{ /* fprintf(stderr, "MULOP[%s]", yytext);*/ yylval.opval = STAR; return MULOP; }
+"/"		{ /* fprintf(stderr, "MULOP[%s]", yytext);*/ yylval.opval = SLASH; return MULOP; }
 
-{number}	{ fprintf(stderr, "INUM[%d]", yylval.ival = atoi(yytext)); return INUM; }
-{number}"."{number}	{ fprintf(stderr, "RNUM[%f]", yylval.rval = atof(yytext)); return RNUM; }
-{ident}		{ fprintf(stderr, "ID[%s]", yylval.sval = strdup(yytext)); return ID; }
+{number}	{ /* fprintf(stderr, "INUM[%d]", atoi(yytext));*/ yylval.ival = atoi(yytext); return INUM; }
+{number}"."{number}	{ /* fprintf(stderr, "RNUM[%f]", atof(yytext));*/ yylval.rval = atof(yytext); return RNUM; }
+{ident}		{ /* fprintf(stderr, "ID[%s]", strdup(yytext));*/ yylval.sval = strdup(yytext); return ID; }
 
 {whitespace}	{ ; }
-\n			{ fprintf(stderr,"%s", yytext); }
-.			{ fprintf(stderr, "{%c}", yytext[0]); return yytext[0]; }
+\n		{ /*fprintf(stderr,"%s", yytext);*/ }
+.		{ /*fprintf(stderr, "{%c}", yytext[0]);*/ return yytext[0]; }
 
 %%
 
-void echo(char *message)
+void echo(string message)
 {
-	fprintf(stderr, "{%s}", message);
+    /*fprintf(stderr, "{%s}", message)*/;
 }
