@@ -4,9 +4,12 @@
 #include "y.tab.hpp"
 
 void echo(string);
+int lineno = 1;
 
 %}
 
+%x              COMMENT
+                        
 ident		[a-zA-Z][a-zA-Z0-9]*
 number		[0-9]+
 whitespace	[ \t]+
@@ -26,19 +29,22 @@ whitespace	[ \t]+
 "if"		{ echo("IF"); return IF; }
 "then"		{ echo("THEN"); return THEN; }
 "else"		{ echo("ELSE"); return ELSE; }
+"and"           { echo("AND"); return AND; }
 "while"		{ echo("WHILE"); return WHILE; }
 "do"		{ echo("DO"); return DO; }
 "not"		{ echo("NOT"); return NOT; }
+"to"            { echo("TO"); return TO; }
+"for"           { echo("FOR"); return FOR; }
 
 ".."		{ echo("DOTDOT"); return DOTDOT; }
 ":="		{ echo("ASSIGNOP"); return ASSIGNOP; }
 
-"="		{ /* fprintf(stderr, "RELOP[%s]", yytext);*/ return RELOP; }
-"<>"		{ /* fprintf(stderr, "RELOP[%s]", yytext);*/ return RELOP; }
-"<"		{ /* fprintf(stderr, "RELOP[%s]", yytext);*/ return RELOP; }
-"<="		{ /* fprintf(stderr, "RELOP[%s]", yytext);*/ return RELOP; }
-">"		{ /* fprintf(stderr, "RELOP[%s]", yytext);*/ return RELOP; }
-">="		{ /* fprintf(stderr, "RELOP[%s]", yytext);*/ return RELOP; }
+"="		{ /* fprintf(stderr, "RELOP[%s]", yytext);*/ yylval.opval = EQ; return RELOP; }
+"<>"		{ /* fprintf(stderr, "RELOP[%s]", yytext);*/ yylval.opval = NE; return RELOP; }
+"<"		{ /* fprintf(stderr, "RELOP[%s]", yytext);*/ yylval.opval = LT; return RELOP; }
+"<="		{ /* fprintf(stderr, "RELOP[%s]", yytext);*/ yylval.opval = LE; return RELOP; }
+">"		{ /* fprintf(stderr, "RELOP[%s]", yytext);*/ yylval.opval = GT; return RELOP; }
+">="		{ /* fprintf(stderr, "RELOP[%s]", yytext);*/ yylval.opval = GE; return RELOP; }
 
 "or"		{ /* fprintf(stderr, "ADDOP[%s]", yytext);*/ yylval.opval = OR; return ADDOP; }
 "+"		{ /* fprintf(stderr, "ADDOP[%s]", yytext);*/ yylval.opval = PLUS; return ADDOP; }
@@ -50,10 +56,16 @@ whitespace	[ \t]+
 
 {number}	{ /* fprintf(stderr, "INUM[%d]", atoi(yytext));*/ yylval.ival = atoi(yytext); return INUM; }
 {number}"."{number}	{ /* fprintf(stderr, "RNUM[%f]", atof(yytext));*/ yylval.rval = atof(yytext); return RNUM; }
-{ident}		{ /* fprintf(stderr, "ID[%s]", strdup(yytext));*/ yylval.sval = strdup(yytext); return ID; }
+{ident}	        { /* fprintf(stderr, "ID[%s]", strdup(yytext));*/ yylval.sval = strdup(yytext); return ID; }
+
+"//"[^\n]*\n    { /* do nothing for comments*/; }
+"(*"            { BEGIN(COMMENT); }
+<COMMENT>\n     { ; }
+<COMMENT>.      { ; }
+<COMMENT>"*)"   { BEGIN(INITIAL); } /* reset lex to normal state */
 
 {whitespace}	{ ; }
-\n		{ /*fprintf(stderr,"%s", yytext);*/ }
+\n		{ ++lineno; /*fprintf(stderr,"%s", yytext);*/ }
 .		{ /*fprintf(stderr, "{%c}", yytext[0]);*/ return yytext[0]; }
 
 %%

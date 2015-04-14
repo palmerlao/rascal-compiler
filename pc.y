@@ -4,10 +4,11 @@ using std::cout;
 #include <stdio.h>
 #include "Tree.h"
 #include "Scope.h"
-
-extern void yyerror(char*);
+#define YYDEBUG 1
 extern int yylex();
 extern int yyparse();
+extern int lineno;
+void yyerror(char*);
 %}
 
 %union {
@@ -42,7 +43,7 @@ extern int yyparse();
 %token                  FUNCTION PROCEDURE
 %token                  BBEGIN END
 %token                  IF THEN ELSE
-%token                  WHILE DO
+%token                  WHILE DO FOR TO
 
 %token                  FUNCTION_CALL
 %token                  ARRAY_ACCESS
@@ -74,7 +75,7 @@ program:
 	compound_statement
 	'.'
                 {
-                    cout << "PROGRAM " << $2 << ": " << endl;
+                    cout << "line "<< lineno <<": PROGRAM " << $2 << ": " << endl;
                     $9->display(cout, 0);
                     cout << endl;
                 }
@@ -108,7 +109,7 @@ subprogram_declarations
 subprogram_declaration
 	: subprogram_head declarations subprogram_declarations compound_statement
                 {
-                    cout << $1 << ":" << endl;
+                    cout << "line " << lineno << ": " << $1 << ":" << endl;
                     $4->display(cout, 0);
                     cout << endl;
                 }
@@ -167,9 +168,22 @@ statement
                 {
                     $$ = new Tree( $2, IF, new Tree($4, ELSE, $6));
                 }
+/*              	| IF expression THEN statement
+                {
+                    $$ = new Tree( $2, IF, $4);
+                } */
+                
 	| WHILE expression DO statement
                 {
                     $$ = new Tree($2, WHILE, $4);
+                }
+        | FOR variable ASSIGNOP expression TO expression DO statement
+                {
+                    $$ = new Tree(new Tree($2,
+                                           ASSIGNOP,
+                                           new Tree($4, TO, $6)),
+                                  FOR,
+                                  $8);
                 }
 	;
 
@@ -257,7 +271,7 @@ factor
 %%
 
 void yyerror(char* message) {
-    fprintf(stderr, "Error: %s\n", message);
+    fprintf(stderr, "line %d, error: %s\n", lineno, message);
     exit(1);
 }
 main() {
