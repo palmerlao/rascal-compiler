@@ -1,4 +1,8 @@
 #include <cassert>
+#include <cstdlib>
+#include <iostream>
+using std::cerr;
+using std::endl;
 #include <sstream>
 using std::ostringstream;
 #include "Scope.h"
@@ -20,8 +24,10 @@ Scope::Scope(string name, vector<Decls>* var_decls, vector<Scope*>* c, Tree* cod
 void Scope::insert(vector<string> ids, TypeSignature type) {
   string err_msg;
   for (int i=0; i<ids.size(); i++) {
-    err_msg = "ID " + ids[i] + " in " + scope_name + " has already been declared. ";
-    assert( err_msg.c_str() && syms.count(ids[i]) == 0); // check that the current id hasn't been inserted before.
+    if (syms.count(ids[i]) != 0) {
+      cerr << endl << "ERROR: ID " << ids[i] << " in " << scope_name << " has already been declared. " << endl;
+      exit(1);
+    }
     syms[ids[i]] = type;
   }
 }
@@ -33,6 +39,13 @@ void Scope::search(string name) {
 void Scope::scope_link(Scope* child) {
   children.push_back(child);
   child->parent = this;
+
+  // push up function/proc vars
+  vector<string> ids;
+  ids.push_back(child->scope_name);
+  TypeSignature ts = child->syms[ids[0]];
+  this->insert(ids, ts);
+  child->syms.erase(ids[0]);
 }
 
 void Scope::scope_link(vector<Scope*> chitlins) {

@@ -4,7 +4,7 @@
 #include "Scope.h"
 #include "y.tab.hpp"
 
-#define LEX_DBG 1
+#define LEX_DBG 0
 
 void echo(char*);
 int lineno = 1;
@@ -43,27 +43,87 @@ whitespace	[ \t]+
 ".."		{ echo("DOTDOT"); return DOTDOT; }
 ":="		{ echo("ASSIGNOP"); return ASSIGNOP; }
 
-"="		{ fprintf(stderr, "RELOP[%s]", yytext); yylval.opval = EQ; return RELOP; }
-"<>"		{ fprintf(stderr, "RELOP[%s]", yytext); yylval.opval = NE; return RELOP; }
-"<"		{ fprintf(stderr, "RELOP[%s]", yytext); yylval.opval = LT; return RELOP; }
-"<="		{ fprintf(stderr, "RELOP[%s]", yytext); yylval.opval = LE; return RELOP; }
-">"		{ fprintf(stderr, "RELOP[%s]", yytext); yylval.opval = GT; return RELOP; }
-">="		{ fprintf(stderr, "RELOP[%s]", yytext); yylval.opval = GE; return RELOP; }
+"="		{
+                  if (LEX_DBG) fprintf(stderr, "RELOP[%s]", yytext);
+                  yylval.opval = EQ;
+                  return RELOP;
+                }
+"<>"		{
+                  if (LEX_DBG) fprintf(stderr, "RELOP[%s]", yytext);
+                  yylval.opval = NE;
+                  return RELOP;
+                }
+"<"		{
+                  if (LEX_DBG) fprintf(stderr, "RELOP[%s]", yytext);
+                  yylval.opval = LT;
+                  return RELOP;
+                }
+"<="		{
+                  if (LEX_DBG) fprintf(stderr, "RELOP[%s]", yytext);
+                  yylval.opval = LE;
+                  return RELOP;
+                }
+">"		{
+                  if (LEX_DBG) fprintf(stderr, "RELOP[%s]", yytext);
+                  yylval.opval = GT;
+                  return RELOP;
+                }
+">="		{
+                  if (LEX_DBG) fprintf(stderr, "RELOP[%s]", yytext);
+                  yylval.opval = GE;
+                  return RELOP;
+                }
 
-"or"		{ fprintf(stderr, "ADDOP[%s]", yytext); yylval.opval = OR; return ADDOP; }
-"+"		{ fprintf(stderr, "ADDOP[%s]", yytext); yylval.opval = PLUS; return ADDOP; }
-"-"		{ fprintf(stderr, "ADDOP[%s]", yytext); yylval.opval = MINUS; return ADDOP; }
+"or"		{
+                  if (LEX_DBG) fprintf(stderr, "ADDOP[%s]", yytext);
+                  yylval.opval = OR;
+                  return ADDOP;
+                }
+"+"		{
+                  if (LEX_DBG) fprintf(stderr, "ADDOP[%s]", yytext);
+                  yylval.opval = PLUS;
+                  return ADDOP;
+                }
+"-"		{
+                  if (LEX_DBG) fprintf(stderr, "ADDOP[%s]", yytext);
+                  yylval.opval = MINUS;
+                  return ADDOP;
+                }
 
-"and"		{ fprintf(stderr, "MULOP[%s]", yytext); yylval.opval = AND; return MULOP; }
-"*"		{ fprintf(stderr, "MULOP[%s]", yytext); yylval.opval = STAR; return MULOP; }
-"/"		{ fprintf(stderr, "MULOP[%s]", yytext); yylval.opval = SLASH; return MULOP; }
+"and"		{
+                  if (LEX_DBG) fprintf(stderr, "MULOP[%s]", yytext);
+                  yylval.opval = AND;
+                  return MULOP;
+                }
+"*"		{
+                  if (LEX_DBG) fprintf(stderr, "MULOP[%s]", yytext);
+                  yylval.opval = STAR;
+                  return MULOP;
+                }
+"/"		{
+                  if (LEX_DBG) fprintf(stderr, "MULOP[%s]", yytext);
+                  yylval.opval = SLASH;
+                  return MULOP;
+                }
 
-{number}	{ fprintf(stderr, "INUM[%d]", atoi(yytext)); yylval.ival = atoi(yytext); return INUM; }
-{number}"."{number}	{ fprintf(stderr, "RNUM[%f]", atof(yytext)); yylval.rval = atof(yytext); return RNUM; }
-{ident}	        { fprintf(stderr, "ID[%s]", strdup(yytext)); yylval.sval = strdup(yytext); return ID; }
+{number}	{
+                  if (LEX_DBG) fprintf(stderr, "INUM[%d]", atoi(yytext));
+                  yylval.ival = atoi(yytext);
+                  return INUM;
+                }
+{number}"."{number}	{
+                          if (LEX_DBG) fprintf(stderr, "RNUM[%f]", atof(yytext));
+                          yylval.rval = atof(yytext);
+                          return RNUM;
+                        }
+{ident}	        {
+                  if (LEX_DBG)fprintf(stderr, "ID[%s]", strdup(yytext));
+                  yylval.sval = strdup(yytext);
+                  return ID;
+                }
 
 "//"            { BEGIN(COMMENT1); }
-<COMMENT1>"\n"    { ++lineno; BEGIN(INITIAL); }
+<COMMENT1>"\n"  { ++lineno; BEGIN(INITIAL); }
 <COMMENT1>.     { ; }
 
 "(*"            { BEGIN(COMMENT); }
@@ -72,8 +132,14 @@ whitespace	[ \t]+
 <COMMENT>.      { ; }
 
 {whitespace}	{ ; }
-\n		{ ++lineno; fprintf(stderr,"%s", yytext); }
-.		{ fprintf(stderr, "{%c}", yytext[0]); return yytext[0]; }
+\n		{
+                  ++lineno;
+                  if (LEX_DBG) fprintf(stderr,"%s", yytext);
+                }
+.		{
+                  if(LEX_DBG) fprintf(stderr, "{%c}", yytext[0]);
+                  return yytext[0];
+                }
 
 %%
 
