@@ -1,14 +1,28 @@
 %{
 #include <iostream>
-using std::cout;
+using std::cerr;
+using std::endl;
+#include <string>
+using std::string;
+#include <vector>
+using std::vector;
+
 #include <stdio.h>
+
 #include "Tree.h"
 #include "Scope.h"
+
 #define YYDEBUG 1
-extern int yylex();
-extern int yyparse();
-extern int lineno;
+#define SCOPE_DBG 1
+#define TREE_DBG 0
+
+int yylex();
+int yyparse();
 void yyerror(char*);
+
+extern int lineno;
+extern Scope* prog_scope;
+extern Scope* current;
 %}
 
 %union {
@@ -20,6 +34,8 @@ void yyerror(char*);
 
     /* for passing around the trees */
     Tree *tval;
+    /* dirty thing to get around some strange typing error */
+    void *vp;
 }
 
 %token  <ival>          INUM
@@ -49,6 +65,7 @@ void yyerror(char*);
 %token                  ARRAY_ACCESS
 %token                  COMMA
 %token                  SEMICOLON
+%token                  ARGUMENT
 
 %type   <sval>          subprogram_head
 
@@ -65,6 +82,14 @@ void yyerror(char*);
 %type   <tval>          term
 %type   <tval>          factor
 
+%type   <vp>            identifier_list // a vector of ids (represented as strings)
+%type   <vp>            type // a vector of types (represented as integers)
+%type   <vp>            subprogram_declarations // a vector of scopes (which will have the same parent)
+%type   <vp>            declarations // a pointer to a vector<Decls>
+%type   <vp>            arguments // a pointer to a vector<Decls>
+%type   <vp>            parameter_list
+%type   <vp>            subprogram_declaration
+%type   <ival>          standard_type
                         
 %%
 
@@ -75,60 +100,134 @@ program:
 	compound_statement
 	'.'
                 {
-                    cout << "line "<< lineno <<": PROGRAM " << $2 << ": " << endl;
-                    $9->display(cout, 0);
-                    cout << endl;
+                    if (TREE_DBG) {
+                        cerr << "line "<< lineno <<": PROGRAM " << $2 << ": " << endl;
+                        $9->display(cerr, 0);
+                        cerr << endl;
+                    }
+                
+                   prog_scope = new Scope(string($2),
+                                           (vector<Decls>*) $7,
+                                           (vector<Scope*>*) $8,
+                                           $9);
+                    current = prog_scope;
                 }
 	;
 
 identifier_list
 	: ID
+                {
+                    vector<string> *tmp = new vector<string>;
+                    tmp->push_back(string($1));
+                    $$ = tmp;
+                }
 	| identifier_list ',' ID
+                {
+                    vector<string> *tmp = (vector<string>*) $1;
+                    tmp->push_back(string($3));
+                    $$ = tmp;
+                }
 	;
 
 declarations
 	: declarations VAR identifier_list ':' type ';'
+                {
+                    vector<Decls> *tmp = (vector<Decls>*) $1;
+                    vector<string> *ids = (vector<string>*) $3;
+                    TypeSignature *types = (TypeSignature*) $5;
+                    tmp->push_back( make_pair(ids, types) );
+                    $$ = tmp;
+                }
 	| /* empty */
+                {
+                    $$ = new vector<Decls>;
+                }
 	;
 
 type
 	: standard_type
+                {
+                    TypeSignature *tmp = new TypeSignature;
+                    tmp->push_back($1);
+                    $$ = tmp;
+                }
 	| ARRAY '[' INUM DOTDOT INUM ']' OF standard_type
+                {
+                    TypeSignature *tmp = new TypeSignature;
+                    tmp->push_back(ARRAY);
+                    tmp->push_back($3);
+                    tmp->push_back($5);
+                    tmp->push_back($8);
+                    $$ = tmp;
+                }
 	;
 
 standard_type
 	: INTEGER
+                { $$ = INTEGER; }
 	| REAL
+                { $$ = REAL; }
 	;
 
 subprogram_declarations
 	: subprogram_declarations subprogram_declaration ';'
+                {
+                    vector<Scope*> *tmp = (vector<Scope*>*) $1;
+                    tmp->push_back((Scope*) $2);
+                    $$ = tmp;
+                }
 	| /* empty */
+                {
+                    $$ = new vector<Scope*>;
+                }
 	;
 
 subprogram_declaration
 	: subprogram_head declarations subprogram_declarations compound_statement
                 {
-                    cout << "line " << lineno << ": " << $1 << ":" << endl;
-                    $4->display(cout, 0);
-                    cout << endl;
+                    if (TREE_DBG) {
+                        cerr << "line " << lineno << ": " << $1 << ":" << endl;
+                        $4->display(cerr, 0);
+                        cerr << endl;
+                    }
+                    string id = string($1);
+                    $$ = new Scope(id, (vector<Decls>*) $2, (vector<Scope*>*) $3, $4);
                 }
 	;
 
 subprogram_head
 	: FUNCTION ID arguments ':' standard_type ';'
-                { $$ = $2; }
+                {
+                    $$ = $2;
+                }
 	| PROCEDURE ID arguments ';'
                 { $$ = $2; }
 	;
 
 arguments
 	: '(' parameter_list ')'
+                {
+                    $$ = $2;
+                }
 	;
 
 parameter_list
-	: identifier_list ':' type
-	| parameter_list ';' identifier_list ':' type
+	: identifier_list ':' standard_type
+                {
+                    vector<Decls>* ret = new vector<Decls>;
+                    vector<string> *t1 = (vector<string>*) $1;
+                    TypeSignature *t2 = (TypeSignature*) $3;
+                    ret->push_back( make_pair(t1, t2) );
+                    $$ = ret;
+                }
+	| parameter_list ';' identifier_list ':' standard_type
+                {
+                    vector<Decls>* ret = (vector<Decls>*) $1;
+                    vector<string> *t1 = (vector<string>*) $3;
+                    TypeSignature *t2 = (TypeSignature*) $5;
+                    ret->push_back( make_pair(t1, t2) );
+                    $$ = ret;
+                }
 	;
 
 
@@ -274,7 +373,10 @@ void yyerror(char* message) {
     fprintf(stderr, "line %d, error: %s\n", lineno, message);
     exit(1);
 }
+
+Scope *prog_scope, *current;
+
 main() {
-    cout << endl;
+    cerr << endl;
     yyparse();
 }
