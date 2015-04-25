@@ -41,3 +41,7 @@ ostream& Scope::display(ostream& out, int spaces) {
   
   return out;
 }
+
+ostream& display_type_sig(ostream& out, int spaces, TypeSignature) {
+  return out;
+}

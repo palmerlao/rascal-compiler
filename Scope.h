@@ -18,8 +18,8 @@ typedef vector<int> TypeSignature;
 /*
   For inum, rnum: just one integer.
   for arrays: ARRAY <lower_bound> <upper> <standard_type>
-  for functions/procedures: <FUNCTION|PROCEDURE> <standard_type> .. <standard_type> <inum|rnum> (last one: return type)
-  something is an argument when the last entry is ARG.
+  for functions/procedures: <FUNCTION|PROCEDURE> <type> .. <type> <inum|rnum> (last one: return type)
+  something is an argument when the last entry is ARGUMENT.
  */
 typedef map<string, TypeSignature> SymbolTable;
 typedef pair<vector<string>*,TypeSignature*> Decls;

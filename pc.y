@@ -67,7 +67,7 @@ extern Scope* current;
 %token                  SEMICOLON
 %token                  ARGUMENT
 
-%type   <sval>          subprogram_head
+//                       %type   <sval>          subprogram_head
 
 %type   <tval>          compound_statement
 %type   <tval>          optional_statements
@@ -106,11 +106,10 @@ program:
                         cerr << endl;
                     }
                 
-                   prog_scope = new Scope(string($2),
+                    prog_scope = new Scope(string($2),
                                            (vector<Decls>*) $7,
                                            (vector<Scope*>*) $8,
                                            $9);
-                    current = prog_scope;
                 }
 	;
 
@@ -182,6 +181,7 @@ subprogram_declarations
                 }
 	;
 
+/*
 subprogram_declaration
 	: subprogram_head declarations subprogram_declarations compound_statement
                 {
@@ -203,6 +203,79 @@ subprogram_head
 	| PROCEDURE ID arguments ';'
                 { $$ = $2; }
 	;
+*/
+subprogram_declaration
+       // 1        2  3         4   5             6   7            8                       9
+        : FUNCTION ID arguments ':' standard_type ';' declarations subprogram_declarations compound_statement
+                {
+                    if (TREE_DBG) {
+                        cerr << "line " << lineno << ": " << $2 << ":" << endl;
+                        $9->display(cerr, 0);
+                        cerr << endl;
+                    }
+                    string id = string($2);
+                    vector<Decls>* args = (vector<Decls>*) $3;
+                    vector<Decls>* decls = (vector<Decls>*) $7;
+                    // construct the function entry. We'll push it up the scope tree later.
+                    Decls tmp;
+                    TypeSignature *fcn_type = new TypeSignature;
+                    fcn_type->push_back(FUNCTION);
+                    for (int i=0; i<args->size(); i++) {
+                        tmp = (*args)[i];
+                        for (int j=0; j<(tmp.first)->size(); j++) // for each arg of this type
+                            for (int k=0; k<((tmp.second)->size())-1; k++) // push back the type, except the trailing ARGUMENT.
+                                fcn_type->push_back( (*(tmp.second))[k] );
+                    }
+                    fcn_type->push_back($5); // the return type.
+                    vector<Decls>* total = new vector<Decls>; // (id,fcn_type) + args + decls
+
+                    // the function bit
+                    vector<string> *fcn_id = new vector<string>;
+                    fcn_id->push_back(id);
+                    total->push_back( make_pair(fcn_id, fcn_type) );
+                    // args
+                    for (int i=0; i<args->size(); i++)
+                        total->push_back( (*args)[i] );
+                    // decls
+                    for (int i=0; i<decls->size(); i++)
+                        total->push_back( (*decls)[i] );
+                    $$ = new Scope(id, total, (vector<Scope*>*) $8, $9);
+                }
+        | PROCEDURE ID arguments ';' declarations subprogram_declarations compound_statement 
+                { //yolo copy pasta swag
+                    if (TREE_DBG) {
+                        cerr << "line " << lineno << ": " << $2 << ":" << endl;
+                        $7->display(cerr, 0);
+                        cerr << endl;
+                    }
+                    string id = string($2);
+                    vector<Decls>* args = (vector<Decls>*) $3;
+                    vector<Decls>* decls = (vector<Decls>*) $5;
+                    // construct the function entry. We'll push it up the scope tree later.
+                    Decls tmp;
+                    TypeSignature *fcn_type = new TypeSignature;
+                    fcn_type->push_back(PROCEDURE);
+                    for (int i=0; i<args->size(); i++) {
+                        tmp = (*args)[i];
+                        for (int j=0; j<(tmp.first)->size(); j++) // for each arg of this type
+                            for (int k=0; k<((tmp.second)->size())-1; k++) // push back the type, except the trailing ARGUMENT.
+                                fcn_type->push_back( (*(tmp.second))[k] );
+                    }
+                    vector<Decls>* total = new vector<Decls>; // (id,fcn_type) + args + decls
+
+                    // the function bit
+                    vector<string> *fcn_id = new vector<string>;
+                    fcn_id->push_back(id);
+                    total->push_back( make_pair(fcn_id, fcn_type) );
+                    // args
+                    for (int i=0; i<args->size(); i++)
+                        total->push_back( (*args)[i] );
+                    // decls
+                    for (int i=0; i<decls->size(); i++)
+                        total->push_back( (*decls)[i] );
+                    $$ = new Scope(id, total, (vector<Scope*>*) $6, $7);
+                }
+        ;
 
 arguments
 	: '(' parameter_list ')'
@@ -212,19 +285,21 @@ arguments
 	;
 
 parameter_list
-	: identifier_list ':' standard_type
+	: identifier_list ':' type
                 {
                     vector<Decls>* ret = new vector<Decls>;
                     vector<string> *t1 = (vector<string>*) $1;
                     TypeSignature *t2 = (TypeSignature*) $3;
+                    t2->push_back(ARGUMENT);                    
                     ret->push_back( make_pair(t1, t2) );
                     $$ = ret;
                 }
-	| parameter_list ';' identifier_list ':' standard_type
+	| parameter_list ';' identifier_list ':' type
                 {
                     vector<Decls>* ret = (vector<Decls>*) $1;
                     vector<string> *t1 = (vector<string>*) $3;
                     TypeSignature *t2 = (TypeSignature*) $5;
+                    t2->push_back(ARGUMENT);
                     ret->push_back( make_pair(t1, t2) );
                     $$ = ret;
                 }
