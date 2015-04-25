@@ -1,6 +1,10 @@
 #include <cassert>
+#include <sstream>
+using std::ostringstream;
 #include "Scope.h"
 #include "y.tab.hpp"
+
+string display_type_sig(TypeSignature);
 
 Scope::Scope(string name, vector<Decls>* var_decls, vector<Scope*>* c, Tree* code) {
     scope_name = name;
@@ -38,10 +42,50 @@ void Scope::scope_link(vector<Scope*> chitlins) {
 }
 
 ostream& Scope::display(ostream& out, int spaces) {
-  
+  string spacer = string(spaces, '\t');
+  string dspc = " "+spacer;
+  out << spacer << "SCOPE " << scope_name << ":" << endl;
+  for (SymbolTable::iterator it = syms.begin();
+       it != syms.end();
+       it++) {
+    out << dspc << it->first << ":: ";
+    out << display_type_sig(it->second);
+    out << endl;
+  }
+  for (int i=0; i<children.size(); i++)
+    children[i]->display(out, spaces+1);
   return out;
 }
 
-ostream& display_type_sig(ostream& out, int spaces, TypeSignature) {
-  return out;
+string display_type_sig(TypeSignature ts) {
+  string result;
+  for (int i=0; i<ts.size(); i++) {
+    switch (ts[i]) {
+    case INTEGER:
+      result += "INTEGER ";
+      break;
+    case REAL:
+      result += "REAL ";
+      break;
+    case FUNCTION:
+      result += "FUNCTION ";
+      break;
+    case PROCEDURE:
+      result += "PROCEDURE ";
+      break;
+    case ARRAY:
+      result += "ARRAY ";
+      break;
+    case ARGUMENT:
+      result += "ARGUMENT ";
+      break;
+    default:
+      ostringstream ss; ss << ts[i] << " ";
+      result += ss.str();
+      ss.str("");
+      ss.clear();
+      break;
+    }
+  }
+  return result;
 }

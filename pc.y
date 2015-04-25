@@ -110,6 +110,7 @@ program:
                                            (vector<Decls>*) $7,
                                            (vector<Scope*>*) $8,
                                            $9);
+                    prog_scope->display(cerr,0);
                 }
 	;
 
