@@ -50,7 +50,9 @@ class Scope {
   string display_type_sig(TypeSignature ts);
 
   // check that the tree refers to accessible vars
-  bool check_vars_valid(Tree*); 
+  void check_vars_valid(Tree*);
+  // computes types but exits if something is inconsistent.
+  int compute_expr_types(Tree*);
   
 };
 

@@ -55,7 +55,7 @@ extern Scope* current;
 %token                  PROGRAM
 %token                  VAR
 %token                  ARRAY OF DOTDOT
-%token                  INTEGER REAL
+%token                  INTEGER REAL BOOL
 %token                  FUNCTION PROCEDURE
 %token                  BBEGIN END
 %token                  IF THEN ELSE

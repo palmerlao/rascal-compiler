@@ -75,6 +75,12 @@ ostream& Tree::display(ostream& out, int level) {
   case WHILE:
     out << "WHILE";
     break;
+  case FOR:
+    out << "FOR";
+    break;
+  case TO:
+    out << "TO";
+    break;
   case IF:
     out << "IF";
     break;

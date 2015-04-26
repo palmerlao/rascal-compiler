@@ -124,15 +124,51 @@ bool Scope::semantic_check() {
   return result;
 }
 
-bool Scope::check_vars_valid(Tree* t) {
+void Scope::check_vars_valid(Tree* t) {
   if (t != NULL) {
     // if you can't find this node's id you won't even
     // get to check the rest of the tree, you'll exit.
     if (t->type == ID)
       search( *((t->attr).sval), scope_name );
-    return check_vars_valid(t->lr[0]) &&
-      check_vars_valid(t->lr[1]);
-  } else {
-    return true;
+    check_vars_valid(t->lr[0]);
+    check_vars_valid(t->lr[1]);
   }
+}
+
+int Scope::compute_expr_types(Tree* t) {
+  int lt = compute_expr_types(t->lr[0]);
+  int rt = compute_expr_types(t->lr[1]);
+  switch (t->type) {
+  case INUM:
+    return INTEGER;
+  case RNUM:
+    return REAL;
+  case RELOP:
+    if (lt == rt)
+      return BOOL;
+    else {
+      cerr << "ERROR: Comparison of disparate types." << endl;
+      exit(1);
+    }
+    break;
+  case ADDOP:
+    if (lt == rt && (lt==INTEGER || lt==REAL))
+      return lt;
+    else {
+      cerr << "ERROR: Addition of disparate types." << endl;
+      exit(1);
+    }
+    break;
+  case MULOP:
+    if (lt == rt && (lt==INTEGER || lt==REAL))
+      return lt;
+    else {
+      cerr << "ERROR: Multiplication of disparate types." << endl;
+      exit(1);
+    }
+    break;
+  case ID:
+    
+  }
+    
 }
