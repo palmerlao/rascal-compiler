@@ -10,7 +10,7 @@ using std::string;
 
 class Tree {
  public:
-  Tree() { lr[0] = lr[1] = NULL; }
+  Tree() { type = 0; lr[0] = lr[1] = NULL; }
   Tree(char*);
   Tree(int);
   Tree(float);
@@ -18,15 +18,15 @@ class Tree {
   Tree(Tree*, int, Tree*, int);
   ostream& display(ostream&, int);
   int type;
- private:
-  Tree *lr[2];
 
+  Tree *lr[2];
   union attr {
-      int ival;
-      float rval;
-      string *sval;
-      int opval;
+    int ival;
+    float rval;
+    string *sval;
+    int opval;
   } attr;
+
 };
 
 #endif

@@ -36,6 +36,9 @@ ostream& Tree::display(ostream& out, int level) {
   string spacer = string(level, '\t');
   out << spacer;
   switch (this->type) {
+  case 0:
+    return out;
+    break;
   case ID:
     out << *(this->attr.sval);
     break;

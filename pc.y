@@ -14,7 +14,7 @@ using std::vector;
 
 #define YYDEBUG 1
 #define SCOPE_DBG 1
-#define TREE_DBG 0
+#define TREE_DBG 1
 
 int yylex();
 int yyparse();
@@ -110,7 +110,9 @@ program:
                                            (vector<Decls>*) $7,
                                            (vector<Scope*>*) $8,
                                            $9);
-                    prog_scope->display(cerr,0);
+                    if (SCOPE_DBG)
+                        prog_scope->display(cerr,0);
+                    prog_scope->semantic_check();
                 }
 	;
 
@@ -243,7 +245,7 @@ subprogram_declaration
                     $$ = new Scope(id, total, (vector<Scope*>*) $8, $9);
                 }
         | PROCEDURE ID arguments ';' declarations subprogram_declarations compound_statement 
-                { //yolo copy pasta swag
+                { //yolo copy pasta swag i am so bad at this
                     if (TREE_DBG) {
                         cerr << "line " << lineno << ": " << $2 << ":" << endl;
                         $7->display(cerr, 0);
@@ -283,7 +285,11 @@ arguments
                 {
                     $$ = $2;
                 }
-	;
+        | /* empty */
+                {
+                    $$ = new vector<Decls>;
+                }
+        ;
 
 parameter_list
 	: identifier_list ':' type
@@ -318,7 +324,8 @@ optional_statements
 	: statement_list
                 { $$ = $1; }
 	| /* empty */
-                { $$ = NULL; }
+                {
+                    $$ = new Tree(); }
 	;
 
 statement_list
@@ -343,11 +350,6 @@ statement
                 {
                     $$ = new Tree( $2, IF, new Tree($4, ELSE, $6));
                 }
-/*              	| IF expression THEN statement
-                {
-                    $$ = new Tree( $2, IF, $4);
-                } */
-                
 	| WHILE expression DO statement
                 {
                     $$ = new Tree($2, WHILE, $4);
