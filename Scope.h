@@ -38,7 +38,7 @@ class Scope {
   // attach many scopes to this one.
   void scope_link(vector<Scope*>);
   ostream& display(ostream&, int);
-  bool semantic_check();
+  void semantic_check();
 
  private:
   string scope_name;

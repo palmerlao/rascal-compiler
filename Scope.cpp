@@ -8,9 +8,12 @@ using std::ostringstream;
 #include "Scope.h"
 #include "y.tab.hpp"
 
+#define SEARCH_DBG 0
+
 string display_type_sig(TypeSignature);
 
-Scope::Scope(string name, vector<Decls>* var_decls, vector<Scope*>* c, Tree* code) {
+Scope::Scope(string name, vector<Decls>* var_decls,
+             vector<Scope*>* c, Tree* code) {
     scope_name = name;
     code_tree = code;
     parent = NULL;
@@ -25,8 +28,10 @@ void Scope::insert(vector<string> ids, TypeSignature type) {
   string err_msg;
   for (int i=0; i<ids.size(); i++) {
     if (syms.count(ids[i]) != 0) {
-      cerr << endl << "ERROR: ID " << ids[i] << " in " << scope_name << " has already been declared. " << endl;
-      exit(1);
+      cerr << endl << "ERROR: ID " << ids[i]
+           << " in " << scope_name << " has already been declared. "
+           << endl;
+      //      exit(1);
     }
     syms[ids[i]] = type;
   }
@@ -36,13 +41,16 @@ TypeSignature Scope::search(string name, string originator) {
   // originator is the scope that started the search
   if (syms.count(name) == 0) { // this name isn't in this scope.
     if (this->parent == NULL) { // this is the top-most scope. Error!
-      cerr << "ERROR: ID " << name << ", used in " << originator << ", was never declared. " << endl;
+      cerr << "ERROR: ID " << name << " in "
+           << originator << " was never declared. " << endl;
       exit(1);
     } else { // otherwise, check the next scope up.
       return this->parent->search(name, originator);
     }
   } else { // it's here.
-    cerr << "Found ID " << name << ", used in " << originator <<", in " << scope_name << "." << endl;
+    if (SEARCH_DBG)
+      cerr << "Found ID " << name << ". Used in " << originator
+           << ", found in " << scope_name << "." << endl;
     return syms[name];
   }
 }
@@ -116,12 +124,13 @@ string Scope::display_type_sig(TypeSignature ts) {
   return result;
 }
 
-bool Scope::semantic_check() {
-  bool result;
-  result = check_vars_valid(code_tree);
+void Scope::semantic_check() {
+  check_vars_valid(code_tree);
+  // array/fcn args checker here pls
+  compute_expr_types(code_tree);
+  
   for (int i=0; i<children.size(); i++)
-    result = result && children[i]->semantic_check();
-  return result;
+    children[i]->semantic_check();
 }
 
 void Scope::check_vars_valid(Tree* t) {
@@ -136,39 +145,40 @@ void Scope::check_vars_valid(Tree* t) {
 }
 
 int Scope::compute_expr_types(Tree* t) {
+  if (t == NULL)
+    return 0;
+
   int lt = compute_expr_types(t->lr[0]);
   int rt = compute_expr_types(t->lr[1]);
+  TypeSignature ts;
+
   switch (t->type) {
+  case ARRAY_ACCESS:
+    // also assume index is integer typed. be sure to run array access checker before this one.
+    ts = search(*(t->lr[0]->attr.sval), scope_name);
+    return ts[3];
+  case FUNCTION_CALL:
+    // assume it's correct for now. be sure to run function call checker before this one to make sure.
+    ts = search(*(t->lr[0]->attr.sval), scope_name);
+    return ts[ts.size()-1];
   case INUM:
     return INTEGER;
   case RNUM:
     return REAL;
   case RELOP:
-    if (lt == rt)
-      return BOOL;
-    else {
-      cerr << "ERROR: Comparison of disparate types." << endl;
-      exit(1);
-    }
-    break;
   case ADDOP:
-    if (lt == rt && (lt==INTEGER || lt==REAL))
-      return lt;
-    else {
-      cerr << "ERROR: Addition of disparate types." << endl;
-      exit(1);
-    }
-    break;
   case MULOP:
     if (lt == rt && (lt==INTEGER || lt==REAL))
       return lt;
     else {
-      cerr << "ERROR: Multiplication of disparate types." << endl;
-      exit(1);
+      cerr << "ERROR: Pairwise operation done on disparate types. Syntax tree:" << endl;
+      t->display(cerr,1);
+      //      exit(1); might segfault without.
     }
     break;
   case ID:
-    
+    ts = search(*(t->attr.sval), scope_name);
+    return ts[0];
+    break;
   }
-    
 }

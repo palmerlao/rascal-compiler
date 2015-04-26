@@ -13,8 +13,8 @@ using std::vector;
 #include "Scope.h"
 
 #define YYDEBUG 1
-#define SCOPE_DBG 1
-#define TREE_DBG 1
+#define SCOPE_DBG 0
+#define TREE_DBG 0
 
 int yylex();
 int yyparse();
