@@ -51,9 +51,15 @@ class Scope {
 
   // check that the tree refers to accessible vars
   void check_vars_valid(Tree*);
-  // computes types but exits if something is inconsistent.
+  // computes types and makes sure they're consistent.
+  // assumes function/array ind are correct. 
   int compute_expr_types(Tree*);
-  
+  // check that while condition is bool.
+  // check that for bound types are consistent.
+  void check_loop_if_conds(Tree*);
+  void check_index_args(Tree*);
+  bool check_function_returns(Tree*);
+  bool check_proc_returns(Tree*);
 };
 
 #endif

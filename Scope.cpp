@@ -115,6 +115,9 @@ string Scope::display_type_sig(TypeSignature ts) {
     case ARGUMENT:
       ss << "ARGUMENT ";
       break;
+    case ANY:
+      ss << "ANY ";
+      break;
     default:
       ss << ts[i] << " ";
       break;
@@ -126,8 +129,22 @@ string Scope::display_type_sig(TypeSignature ts) {
 
 void Scope::semantic_check() {
   check_vars_valid(code_tree);
-  // array/fcn args checker here pls
+  check_index_args(code_tree);
+
   compute_expr_types(code_tree);
+  check_loop_if_conds(code_tree);
+
+  if (this->parent != NULL) {
+    TypeSignature ts = this->parent->search(scope_name, scope_name);
+    if (ts[0] == FUNCTION) {
+      if (!(check_function_returns(code_tree)))
+        cerr << "ERROR in " << scope_name << ": Function did not return a value." << endl;
+    }
+    else { // we have to check a procedure.
+      if (!(check_proc_returns(code_tree)))
+        cerr << "ERROR in " << scope_name << ": Procedure contains a return statement." << endl;
+    }
+  }
   
   for (int i=0; i<children.size(); i++)
     children[i]->semantic_check();
@@ -158,9 +175,10 @@ int Scope::compute_expr_types(Tree* t) {
     ts = search(*(t->lr[0]->attr.sval), scope_name);
     return ts[3];
   case FUNCTION_CALL:
-    // assume it's correct for now. be sure to run function call checker before this one to make sure.
+    // assume it's correct for now. be sure to run function call checker before this one
     ts = search(*(t->lr[0]->attr.sval), scope_name);
-    return ts[ts.size()-1];
+    // I believe this handles the case 'a := b(x)' when b is a proc.
+    return (ts[0] == FUNCTION) ? ts[ts.size()-1] : PROCEDURE;
   case INUM:
     return INTEGER;
   case RNUM:
@@ -169,16 +187,103 @@ int Scope::compute_expr_types(Tree* t) {
   case ADDOP:
   case MULOP:
     if (lt == rt && (lt==INTEGER || lt==REAL))
-      return lt;
+      return (t->type == RELOP) ? BOOL : lt;
     else {
-      cerr << "ERROR: Pairwise operation done on disparate types. Syntax tree:" << endl;
+      cerr << "ERROR in " << scope_name << ": Pairwise operation done on disparate types. Syntax tree:" << endl;
       t->display(cerr,1);
-      //      exit(1); might segfault without.
+      //      exit(1); might segfault without?
     }
     break;
   case ID:
     ts = search(*(t->attr.sval), scope_name);
-    return ts[0];
+    if (*(t->attr.sval) == scope_name) // if the id is the same as the function name
+      return ts[ts.size()-1]; // return what the function should return.
+    // undef. behav. if the function name appears on right side of :=. pls don't
+    else
+      return ts[0];
+    break;
+  case NOT:
+    if (lt == BOOL)
+      return BOOL;
+    else {
+      cerr << "ERROR in " << scope_name << ": Not operator applied to non-boolean type. Syntax tree:" << endl;
+      t->display(cerr,1);
+    }
+    break;
+  case ASSIGNOP:
+    if ( compute_expr_types(t->lr[0]) != compute_expr_types(t->lr[1]) ) {
+      cerr << "ERROR in " << scope_name << ": Tried to use assignment on disparate types. Syntax tree:" << endl;
+      t->display(cerr,1);
+    }
+    return 0;
+  }
+}
+
+void Scope::check_loop_if_conds(Tree* t) {
+  if (t == NULL) return;
+  switch (t->type) {
+
+  case FOR:
+    int looper_t, lower_t, upper_t;
+    looper_t = compute_expr_types(t->lr[0]->lr[0]);
+    lower_t = compute_expr_types(t->lr[0]->lr[1]->lr[0]);
+    upper_t = compute_expr_types(t->lr[0]->lr[1]->lr[1]);
+    if (! ((lower_t == upper_t) && (looper_t == lower_t)) ) {
+      cerr << "ERROR in " << scope_name << ": For loop variable and bound types don't match. Syntax tree:" << endl;
+      t->display(cerr,1);
+    }
+    break;
+
+  case IF:
+  case WHILE:
+    if (compute_expr_types(t->lr[0]) != BOOL) {
+      cerr << "ERROR in " << scope_name << ": If or while condition is not a boolean. Syntax tree:" << endl;
+      t->lr[0]->display(cerr,1);
+    }
     break;
   }
+  check_loop_if_conds(t->lr[0]);
+  check_loop_if_conds(t->lr[1]);
+}
+
+void Scope::check_index_args(Tree* t) {
+  if (t == NULL) return;
+  switch (t->type) {
+  case ARRAY_ACCESS:
+    if (compute_expr_types(t->lr[1]) != INTEGER) {
+      cerr << "ERROR in " << scope_name << ": Array indices must be integer type. Syntax tree:" << endl;
+      t->display(cerr,1);
+    }
+  }
+  check_index_args(t->lr[0]);
+  check_index_args(t->lr[1]);
+}
+
+bool Scope::check_function_returns(Tree* t) {
+  if (t == NULL) // we made it to a leaf without seeing a ret. stmt.
+    return false;
+  if (t->type == ASSIGNOP &&
+      t->lr[0]->type == ID &&
+      scope_name == *(t->lr[0]->attr.sval) ) {
+    TypeSignature ts = search(scope_name, scope_name);
+    if (compute_expr_types(t->lr[1]) == ts[ts.size()-1]) // we found the return statement and the types matched.
+      return true;
+    else { // the types didn't match!
+      cerr << "ERROR in " << scope_name << ": Return value type and function type signature did not match. Syntax tree:" << endl;
+      t->display(cerr,1);
+      return false;
+    }
+  } else
+    return (check_function_returns(t->lr[0]) || check_function_returns(t->lr[1]));
+}
+
+bool Scope::check_proc_returns(Tree* t) {
+  if (t == NULL)
+    return true;
+  if (t->type == ASSIGNOP &&
+      t->lr[0]->type == ID &&
+      scope_name == *(t->lr[0]->attr.sval)) // we found a return stmt.
+    return false;
+  else
+    return (check_proc_returns(t->lr[0]) && check_proc_returns(t->lr[1]));
 }

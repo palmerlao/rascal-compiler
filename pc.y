@@ -38,6 +38,11 @@ extern Scope* current;
     void *vp;
 }
 
+/* for dangling else.
+   Source: http://epaperpress.com/lexandyacc/if.html */
+%nonassoc IFX
+%nonassoc ELSE
+
 %token  <ival>          INUM
 %token  <rval>          RNUM
 %token  <sval>          ID
@@ -66,6 +71,7 @@ extern Scope* current;
 %token                  COMMA
 %token                  SEMICOLON
 %token                  ARGUMENT
+%token                  ANY // for read/write functions.
 
 //                       %type   <sval>          subprogram_head
 
@@ -110,6 +116,13 @@ program:
                                            (vector<Decls>*) $7,
                                            (vector<Scope*>*) $8,
                                            $9);
+                    TypeSignature ts;
+                    ts.push_back(PROCEDURE);
+                    ts.push_back(ANY);
+                    vector<string> ids;
+                    ids.push_back("read");
+                    ids.push_back("write");
+                    prog_scope->insert(ids,ts);
                     if (SCOPE_DBG)
                         prog_scope->display(cerr,0);
                     prog_scope->semantic_check();
@@ -184,29 +197,6 @@ subprogram_declarations
                 }
 	;
 
-/*
-subprogram_declaration
-	: subprogram_head declarations subprogram_declarations compound_statement
-                {
-                    if (TREE_DBG) {
-                        cerr << "line " << lineno << ": " << $1 << ":" << endl;
-                        $4->display(cerr, 0);
-                        cerr << endl;
-                    }
-                    string id = string($1);
-                    $$ = new Scope(id, (vector<Decls>*) $2, (vector<Scope*>*) $3, $4);
-                }
-	;
-
-subprogram_head
-	: FUNCTION ID arguments ':' standard_type ';'
-                {
-                    $$ = $2;
-                }
-	| PROCEDURE ID arguments ';'
-                { $$ = $2; }
-	;
-*/
 subprogram_declaration
        // 1        2  3         4   5             6   7            8                       9
         : FUNCTION ID arguments ':' standard_type ';' declarations subprogram_declarations compound_statement
@@ -325,7 +315,8 @@ optional_statements
                 { $$ = $1; }
 	| /* empty */
                 {
-                    $$ = new Tree(); }
+                    $$ = new Tree();
+                }
 	;
 
 statement_list
@@ -346,6 +337,12 @@ statement
                 { $$ = $1; }
 	| compound_statement
                 { $$ = $1; }
+        // Note that IF x THEN y is the same as If x THEN y ELSE do-nothing
+        | IF expression THEN statement %prec IFX 
+                {
+                    $$ = new Tree($2, IF,
+                                  new Tree($4, ELSE, new Tree()));
+                }
 	| IF expression THEN statement ELSE statement
                 {
                     $$ = new Tree( $2, IF, new Tree($4, ELSE, $6));
