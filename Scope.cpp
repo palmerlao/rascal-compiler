@@ -368,6 +368,28 @@ vector<Tree*> tree2vec(Tree* expr_list) {
   return result;    
 }
 
-void check_fcn_mutation(Tree* t) {
-  
+bool Scope::is_local(string id) { return (syms.count(id) == 1); }
+
+void Scope::check_fcn_mutation(Tree* t) {
+  if (t == NULL)
+    return;
+  if (t->type == ASSIGNOP) {
+    if (t->lr[0]->type == ID) {
+      if (!(is_local( *(t->lr[0]->attr.sval) ))) {
+        cerr << "ERROR in " << scope_name
+             << ": Function mutates nonlocal variable. Syntax tree:" << endl;
+        t->display(cerr,1);
+        exit(1);
+      }
+    } else /* (t->lr[0]->type == ARRAY_ACCESS) */ {
+      if (!(is_local( *(t->lr[0]->lr[0]->attr.sval)))) {
+        cerr << "ERROR in " << scope_name
+             << ": Function mutates nonlocal variable. Syntax tree:" << endl;
+        t->display(cerr,1);
+        exit(1);
+      }
+    }
+  }
+  check_fcn_mutation(t->lr[0]);
+  check_fcn_mutation(t->lr[1]);
 }

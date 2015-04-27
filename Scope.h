@@ -62,6 +62,7 @@ class Scope {
   bool check_proc_returns(Tree*);
   void check_subprog_calls(Tree*);
   void check_proc_call(TypeSignature, Tree*);
+  bool is_local(string); // check if id is local.
   void check_fcn_mutation(Tree*);
 };
 
