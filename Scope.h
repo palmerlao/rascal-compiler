@@ -60,6 +60,9 @@ class Scope {
   void check_index_args(Tree*);
   bool check_function_returns(Tree*);
   bool check_proc_returns(Tree*);
+  void check_subprog_calls(Tree*);
+  void check_proc_call(TypeSignature, Tree*);
+  void check_fcn_mutation(Tree*);
 };
 
 #endif

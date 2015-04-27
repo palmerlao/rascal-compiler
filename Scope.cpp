@@ -11,6 +11,9 @@ using std::ostringstream;
 #define SEARCH_DBG 0
 
 string display_type_sig(TypeSignature);
+void check_proc_call(TypeSignature, Tree*);
+void check_fcn_call(TypeSignature, Tree*);
+vector<Tree*> tree2vec(Tree*);
 
 Scope::Scope(string name, vector<Decls>* var_decls,
              vector<Scope*>* c, Tree* code) {
@@ -31,7 +34,7 @@ void Scope::insert(vector<string> ids, TypeSignature type) {
       cerr << endl << "ERROR: ID " << ids[i]
            << " in " << scope_name << " has already been declared. "
            << endl;
-      //      exit(1);
+      exit(1);
     }
     syms[ids[i]] = type;
   }
@@ -130,22 +133,27 @@ string Scope::display_type_sig(TypeSignature ts) {
 void Scope::semantic_check() {
   check_vars_valid(code_tree);
   check_index_args(code_tree);
-
   compute_expr_types(code_tree);
   check_loop_if_conds(code_tree);
 
   if (this->parent != NULL) {
     TypeSignature ts = this->parent->search(scope_name, scope_name);
     if (ts[0] == FUNCTION) {
-      if (!(check_function_returns(code_tree)))
+      if (!(check_function_returns(code_tree))) {
         cerr << "ERROR in " << scope_name << ": Function did not return a value." << endl;
+        exit(1);
+      }
+      check_fcn_mutation(code_tree);
     }
     else { // we have to check a procedure.
-      if (!(check_proc_returns(code_tree)))
+      if (!(check_proc_returns(code_tree))) {
         cerr << "ERROR in " << scope_name << ": Procedure contains a return statement." << endl;
+        exit(1);
+      }
     }
   }
-  
+  check_subprog_calls(code_tree);
+
   for (int i=0; i<children.size(); i++)
     children[i]->semantic_check();
 }
@@ -191,7 +199,7 @@ int Scope::compute_expr_types(Tree* t) {
     else {
       cerr << "ERROR in " << scope_name << ": Pairwise operation done on disparate types. Syntax tree:" << endl;
       t->display(cerr,1);
-      //      exit(1); might segfault without?
+      exit(1);
     }
     break;
   case ID:
@@ -208,14 +216,23 @@ int Scope::compute_expr_types(Tree* t) {
     else {
       cerr << "ERROR in " << scope_name << ": Not operator applied to non-boolean type. Syntax tree:" << endl;
       t->display(cerr,1);
+      exit(1);
     }
     break;
   case ASSIGNOP:
     if ( compute_expr_types(t->lr[0]) != compute_expr_types(t->lr[1]) ) {
       cerr << "ERROR in " << scope_name << ": Tried to use assignment on disparate types. Syntax tree:" << endl;
       t->display(cerr,1);
+      exit(1);
     }
     return 0;
+  case TO:
+    if (compute_expr_types(t->lr[0]) != compute_expr_types(t->lr[1])) {
+      cerr << "ERROR in " << scope_name << ": Loop bound types don't match. Syntax tree:" << endl;
+      t->display(cerr,1);
+      exit(1);
+    }
+    return compute_expr_types(t->lr[0]);
   }
 }
 
@@ -231,6 +248,7 @@ void Scope::check_loop_if_conds(Tree* t) {
     if (! ((lower_t == upper_t) && (looper_t == lower_t)) ) {
       cerr << "ERROR in " << scope_name << ": For loop variable and bound types don't match. Syntax tree:" << endl;
       t->display(cerr,1);
+      exit(1);
     }
     break;
 
@@ -239,6 +257,7 @@ void Scope::check_loop_if_conds(Tree* t) {
     if (compute_expr_types(t->lr[0]) != BOOL) {
       cerr << "ERROR in " << scope_name << ": If or while condition is not a boolean. Syntax tree:" << endl;
       t->lr[0]->display(cerr,1);
+      exit(1);
     }
     break;
   }
@@ -253,6 +272,7 @@ void Scope::check_index_args(Tree* t) {
     if (compute_expr_types(t->lr[1]) != INTEGER) {
       cerr << "ERROR in " << scope_name << ": Array indices must be integer type. Syntax tree:" << endl;
       t->display(cerr,1);
+      exit(1);
     }
   }
   check_index_args(t->lr[0]);
@@ -271,6 +291,7 @@ bool Scope::check_function_returns(Tree* t) {
     else { // the types didn't match!
       cerr << "ERROR in " << scope_name << ": Return value type and function type signature did not match. Syntax tree:" << endl;
       t->display(cerr,1);
+      exit(1);
       return false;
     }
   } else
@@ -286,4 +307,67 @@ bool Scope::check_proc_returns(Tree* t) {
     return false;
   else
     return (check_proc_returns(t->lr[0]) && check_proc_returns(t->lr[1]));
+}
+
+void Scope::check_subprog_calls(Tree* t) {
+  if (t == NULL)
+    return;
+  string id;
+  TypeSignature ts;
+  if (t->type == FUNCTION_CALL) {
+    id = *(t->lr[0]->attr.sval);
+    ts = search(id, scope_name);
+
+    if (ts[0] == FUNCTION)
+      // chop off <FUNCTION> and return type. also give expr_list of args in t form
+      check_proc_call( TypeSignature(ts.begin()+1, ts.end()-1), t->lr[1] );
+    else // it's a proc.
+      // chop off <PROCEDURE> only. no ret type.
+      check_proc_call( TypeSignature(ts.begin()+1, ts.end()), t->lr[1] );
+  }
+  check_subprog_calls(t->lr[0]);
+  check_subprog_calls(t->lr[1]);
+}
+
+void Scope::check_proc_call(TypeSignature ts, Tree* expr_list) {
+  vector<Tree*> tmp = tree2vec(expr_list);
+  TypeSignature arg_ts;
+  for (vector<Tree*>::iterator it = tmp.begin();
+       it != tmp.end();
+       it++)
+    arg_ts.push_back(compute_expr_types(*it));
+  // check num
+  if (ts.size() != arg_ts.size()) {
+    cerr << "ERROR in " << scope_name << ": function/procedure called with incorrect number of arguments." << endl;
+    cerr << "Expected " << display_type_sig(ts) << endl;
+    cerr << "Called with " << display_type_sig(arg_ts) << endl;
+    exit(1);
+  }
+  // check types
+  for (int i=0; i<ts.size(); i++) {
+    if (ts[i] == ANY) ;
+    else if (ts[i] != arg_ts[i]) {
+      cerr << "ERROR in " << scope_name << ": function/procedure called with incorrect types." << endl;
+      cerr << "Expected " << display_type_sig(ts) << endl;
+      cerr << "Called with " << display_type_sig(arg_ts) << endl;
+      exit(1);
+    }
+  }
+    
+}
+
+vector<Tree*> tree2vec(Tree* expr_list) {
+  vector<Tree*> result;
+  if ((expr_list->lr[0] == NULL) && (expr_list->lr[1] == NULL))
+    { result.push_back(expr_list); return result; }
+  if (expr_list->lr[0]->type != COMMA)
+    result.push_back(expr_list->lr[0]);
+  else
+    result = tree2vec(expr_list->lr[0]);
+  result.push_back(expr_list->lr[1]);
+  return result;    
+}
+
+void check_fcn_mutation(Tree* t) {
+  
 }
