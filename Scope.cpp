@@ -206,7 +206,6 @@ int Scope::compute_expr_types(Tree* t) {
     ts = search(*(t->attr.sval), scope_name);
     if (*(t->attr.sval) == scope_name) // if the id is the same as the function name
       return ts[ts.size()-1]; // return what the function should return.
-    // undef. behav. if the function name appears on right side of :=. pls don't
     else
       return ts[0];
     break;

@@ -126,6 +126,10 @@ program:
                     if (SCOPE_DBG)
                         prog_scope->display(cerr,0);
                     prog_scope->semantic_check();
+                    ofstream o;
+                    o.open("a.s");
+                    prog_scope->top_prologue(o);
+                    prog_scope->gencode(o);
                 }
 	;
 
@@ -255,7 +259,6 @@ subprogram_declaration
                                 fcn_type->push_back( (*(tmp.second))[k] );
                     }
                     vector<Decls>* total = new vector<Decls>; // (id,fcn_type) + args + decls
-
                     // the function bit
                     vector<string> *fcn_id = new vector<string>;
                     fcn_id->push_back(id);
@@ -287,7 +290,7 @@ parameter_list
                     vector<Decls>* ret = new vector<Decls>;
                     vector<string> *t1 = (vector<string>*) $1;
                     TypeSignature *t2 = (TypeSignature*) $3;
-                    t2->push_back(ARGUMENT);                    
+                    t2->push_back(ARGUMENT);
                     ret->push_back( make_pair(t1, t2) );
                     $$ = ret;
                 }

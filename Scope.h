@@ -10,9 +10,12 @@ using std::make_pair;
 using std::vector;
 #include <fstream>
 using std::ostream;
+using std::ofstream;
 
 #include "Tree.h"
-
+/*
+  GOD OBJECT
+ */
 
 typedef vector<int> TypeSignature;
 /*
@@ -38,7 +41,11 @@ class Scope {
   // attach many scopes to this one.
   void scope_link(vector<Scope*>);
   ostream& display(ostream&, int);
+
   void semantic_check();
+  // ----------------------- CODE GENERATION -----------------------
+  void gencode(ofstream&); // stream for output s file.
+  void top_prologue(ofstream&);
 
  private:
   string scope_name;
@@ -46,7 +53,9 @@ class Scope {
   Scope *parent;
   vector<Scope*> children;
   Tree *code_tree;
+  map<string,int> addr_tab;
 
+  // ----------------------- SEMANTIC CHECKING -----------------------
   string display_type_sig(TypeSignature ts);
 
   // check that the tree refers to accessible vars
@@ -64,6 +73,10 @@ class Scope {
   void check_proc_call(TypeSignature, Tree*);
   bool is_local(string); // check if id is local.
   void check_fcn_mutation(Tree*);
+
+  void genasm(ofstream&, Tree*);
+  int compute_ershov_num(Tree*);
+  int compute_act_rec_sz();
 };
 
 #endif
