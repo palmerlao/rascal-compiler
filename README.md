@@ -1,0 +1,2 @@
+# rascal-compiler
+IF YOU'RE REDUCING THIS IT'S TOO LATE
