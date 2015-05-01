@@ -1,0 +1,64 @@
+Usage: ./mypc < <filename>
+Output: a.s (assembly file)
+
+The lex and yacc file work (for the most part) as gone over in class.
+I made a Tree class and a Scope class. The Tree class is essentially
+the same as your Tree struct. The Scope class is basically a symbol
+table (std::map), a vector of pointers to "child" scopes (i.e. scopes
+that can access the "parent's" variables), a pointer to a parent
+scope, and a Tree for the statements in that scope.
+
+There are debug constants in pc.y (TREE_DBG, SCOPE_DBG) and pc.l
+(LEX_DBG) which could be useful for verifying that the structure of
+the programs works as claimed.
+
+The compiler gathers the data from flex/bison into the tree of Scopes,
+then runs Scope/Tree methods to perform semantic checking or any
+necessary AST transformations (e.g. chained RELOP statements). 
+
+This compiler works as expected for all of the tests in the
+tests/Semantic folder. There is a simple test of the chained RELOP
+statement in tests/freewill (our extra feature). 
+
+So far, we have the following working in tests/CodeGeneration:
+t0.p
+t1-2.p
+
+One limitation of the compiler is that it exits immediately after
+seeing an error. You could comment out each exit(1) command to try to
+see more errors. This often works well but isn't guaranteed to be
+entirely correct or even finish executing the program.
+
+Also, functions shouldn't be able to modify non-local variables, but
+procedures should be able to. I think you could call a procedure from
+inside of a function to modify non-local variables, but I haven't
+gotten far enough into the assembly code generation to test this
+reliably. I'm fairly sure that my semantic checking cannot catch this
+error.
+
+This compiler is definitely not optimal in terms of time or
+space. This is because we keep all of the data around in the tree of
+Scopes. Then we do everything in a top-down and unmemoized fashion. If
+we did it bottom-up through bison parser actions it might be more
+efficient. We might also be able to gain efficiency by writing some
+kind of memoization template.
+
+Also, a sizable number of our bison data types are void
+pointers. There was a weird typing error (which I think is due to the
+fact that the lex file is in C and the bison file is in C++) that I
+could not get rid of -- so I have to cast types often inside the
+parser actions.
+
+DRAGON HAIKU
+
+ dragon: it's all trees
+code is data is code is
+   Segmentation fault
+
+BONUS LIMERICK
+
+Rascal is a compiler for Pascal
+I wish I could have written it with Haskell
+but I had to use C++
+which was a pain in the tuchus
+since everything is a tree traversal
