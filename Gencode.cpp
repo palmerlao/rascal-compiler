@@ -106,3 +106,64 @@ void Scope::genasm(ofstream& out, Tree* t) {
     genasm(out, t->lr[0]);
     genasm(out, t->lr[1]);
 }
+
+void Scope::swap_rs() {
+  if ((rstack.size() == 0) || (rstack.size() == 1))
+    return;
+  string t = *(rstack.end());
+  *(rstack.end()) = *(rstack.end()-1);
+  *(rstack.end()-1) = t;
+}
+
+string Scope::pop_rs() {
+  string res = *(rstack.end());
+  rstack.pop_back();
+  return res;
+}
+
+void Scope::push_rs(string id) { rstack.push_back(id); }
+string Scope::top_rs() { return *(rstack.end()); }
+
+string Scope::op2asm(int op) {
+  switch(op) {
+  case PLUS:
+    return "addl";
+  case MINUS:
+    return "subl";
+  case STAR:
+    return "imull";
+  }
+}
+
+void Scope::gen_expr(ofstream& out, Tree* t) {
+  if (t == NULL)
+    return;
+
+  // case 0
+  switch(t->type) {
+  case ID:
+    out << "\t" << "leal\t"
+        << -4*addr_tab[*(t->lr[0]->attr.sval)]
+        << "(%ebp), %eax" << endl;
+    out << "\t" << "movl\t" << "%eax, "
+        << top_rs() << endl;
+    break;
+  case INUM:
+    out << "\t" << "movl\t"
+        << "$" << (t->attr.ival) << ", "
+        << top_rs() << endl;
+    break;
+  }
+
+  int n1 = compute_ershov_num(t->lr[0]);
+  int n2 = compute_ershov_num(t->lr[1]);
+
+  // case 1
+  /*  if (n2 == 0) {
+    out << "\t" << op2asm(t->attr.opval) << "\t";
+    gen_expr(out, t->lr[1]);
+    out << pop_rs() << ", ";
+    gen_expr(out, t->lr[0]);
+    out << pop_rs() << endl;
+    } */
+}

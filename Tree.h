@@ -17,6 +17,7 @@ class Tree {
   Tree(Tree*, int, Tree*);
   Tree(Tree*, int, Tree*, int);
   ostream& display(ostream&, int);
+  void chained_relop_fixer();
   int type;
 
   Tree *lr[2];
@@ -26,7 +27,8 @@ class Tree {
     string *sval;
     int opval;
   } attr;
-
+ private:
+  string opint2str(int);
 };
 
 #endif

@@ -31,6 +31,34 @@ Tree::Tree(Tree* l, int op, Tree* r) {
   type = op;
 }
 
+string Tree::opint2str(int opint) {
+  switch (opint) {
+  case STAR:
+    return "*";
+  case SLASH:
+    return "/";
+  case EQ:
+    return "=";
+  case NE:
+    return "<>";
+  case LT:
+    return "<";
+  case LE:
+    return "<=";
+  case GT:
+    return ">";
+  case GE:
+    return ">=";
+  case OR:
+    return "or";
+  case PLUS:
+    return "+";
+  case MINUS:
+    return "-";
+  case AND:
+    return "and";
+  }
+}
 
 ostream& Tree::display(ostream& out, int level) {
   string spacer = string(level, '\t');
@@ -58,13 +86,13 @@ ostream& Tree::display(ostream& out, int level) {
     out << ":=";
     break;
   case RELOP:
-    out << "RELOP:" << this->attr.opval;
+    out << "RELOP:" << opint2str(this->attr.opval);
     break;
   case MULOP:
-    out << "MULOP:" << this->attr.opval;
+    out << "MULOP:" << opint2str(this->attr.opval);
     break;
   case ADDOP:
-    out << "ADDOP:" << this->attr.opval;
+    out << "ADDOP:" << opint2str(this->attr.opval);
     break;
   case NOT:
     out << "NOT";
@@ -101,4 +129,22 @@ ostream& Tree::display(ostream& out, int level) {
     this->lr[1]->display(out, level+1);
   }
   return out;
+}
+
+void Tree::chained_relop_fixer() {
+  if (this == NULL) return;
+  if (this->type == 0) return;
+  if (this->type == RELOP && this->lr[0]->type == RELOP) {
+    // found RELOP chain.
+    Tree *r = new Tree(this->lr[0]->lr[1],
+                       this->attr.opval,
+                       this->lr[1],
+                       this->type);
+    this->lr[0]->chained_relop_fixer();
+    this->type = MULOP;
+    this->attr.opval = AND;
+    this->lr[1] = r;
+  }
+  this->lr[0]->chained_relop_fixer();
+  this->lr[1]->chained_relop_fixer();
 }

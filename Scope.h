@@ -14,7 +14,7 @@ using std::ofstream;
 
 #include "Tree.h"
 /*
-  GOD OBJECT
+  GOD OBJECT STATUS
  */
 
 typedef vector<int> TypeSignature;
@@ -54,6 +54,7 @@ class Scope {
   vector<Scope*> children;
   Tree *code_tree;
   map<string,int> addr_tab;
+  vector<string> rstack;
 
   // ----------------------- SEMANTIC CHECKING -----------------------
   string display_type_sig(TypeSignature ts);
@@ -74,9 +75,16 @@ class Scope {
   bool is_local(string); // check if id is local.
   void check_fcn_mutation(Tree*);
 
+  // ----------------------- CODE GENERATION -----------------------
   void genasm(ofstream&, Tree*);
   int compute_ershov_num(Tree*);
   int compute_act_rec_sz();
+  void gen_expr(ofstream&, Tree*);
+  void swap_rs();
+  string pop_rs();
+  void push_rs(string);
+  string top_rs();
+  string op2asm(int);
 };
 
 #endif

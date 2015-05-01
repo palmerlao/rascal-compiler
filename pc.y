@@ -126,10 +126,10 @@ program:
                     if (SCOPE_DBG)
                         prog_scope->display(cerr,0);
                     prog_scope->semantic_check();
-                    ofstream o;
+/*                    ofstream o;
                     o.open("a.s");
                     prog_scope->top_prologue(o);
-                    prog_scope->gencode(o);
+                    prog_scope->gencode(o); */
                 }
 	;
 
@@ -397,7 +397,7 @@ expression_list
 expression
 	: simple_expression
                 { $$ = $1; }
-	| simple_expression RELOP simple_expression
+	| expression RELOP simple_expression
                 {
                     $$ = new Tree( $1, $2, $3, RELOP);
                 }

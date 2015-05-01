@@ -131,6 +131,7 @@ string Scope::display_type_sig(TypeSignature ts) {
 }
 
 void Scope::semantic_check() {
+  code_tree->chained_relop_fixer();
   check_vars_valid(code_tree);
   check_index_args(code_tree);
   compute_expr_types(code_tree);
@@ -192,10 +193,19 @@ int Scope::compute_expr_types(Tree* t) {
   case RNUM:
     return REAL;
   case RELOP:
+    if ((lt == rt) && ((lt == INTEGER) || (lt==REAL)))
+      return BOOL;
   case ADDOP:
   case MULOP:
-    if (lt == rt && (lt==INTEGER || lt==REAL))
-      return (t->type == RELOP) ? BOOL : lt;
+    if ((lt == rt) &&
+        (lt==INTEGER || lt==REAL) &&
+        (t->attr.opval != AND) &&
+        (t->attr.opval != OR))
+      return lt;
+    else if ((lt == rt) &&
+             (lt == BOOL) &&
+             ((t->attr.opval == AND) || (t->attr.opval == OR)))
+      return BOOL;
     else {
       cerr << "ERROR in " << scope_name << ": Pairwise operation done on disparate types. Syntax tree:" << endl;
       t->display(cerr,1);
@@ -374,7 +384,8 @@ void Scope::check_fcn_mutation(Tree* t) {
     return;
   if (t->type == ASSIGNOP) {
     if (t->lr[0]->type == ID) {
-      if (!(is_local( *(t->lr[0]->attr.sval) ))) {
+      if ( (*(t->lr[0]->attr.sval) != scope_name) &&
+           !(is_local( *(t->lr[0]->attr.sval) ))) {
         cerr << "ERROR in " << scope_name
              << ": Function mutates nonlocal variable. Syntax tree:" << endl;
         t->display(cerr,1);

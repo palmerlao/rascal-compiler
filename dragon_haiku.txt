@@ -1,3 +1,11 @@
 dragon: it's all trees
 code is data is code is
 Segmentation fault
+
+BONUS LIMERICK
+
+Rascal is a compiler for Pascal
+I wish I could have written it with Haskell
+but I had to use C++
+which was a pain in the tuchus
+since everything is a tree traversal
